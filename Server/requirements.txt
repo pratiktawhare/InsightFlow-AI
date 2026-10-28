@@ -17,6 +17,7 @@ langchain-core
 langchain-community
 langchain-groq
 langchain-text-splitters
+langchain-huggingface
 
 # --- RAG: ChromaDB + HuggingFace embeddings ---
 chromadb

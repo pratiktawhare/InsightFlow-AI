@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     processing_timeout: int = 1800  # 30 minutes
 
     # LLM
-    mistral_api_key: str = os.getenv("MISTRAL_API_KEY", "")
+    groq_api_key: str = os.getenv("GROQ_API_KEY", "")
     sarvam_api_key: str = os.getenv("SARVAM_API_KEY", "")
 
     class Config:
