@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from database import Base, engine
+from api.meetings import router as meetings_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -18,6 +19,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(meetings_router)
 
 @app.get("/api/health")
 async def health_check():
