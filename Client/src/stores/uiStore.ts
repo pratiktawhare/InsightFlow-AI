@@ -16,7 +16,16 @@ export const useUIStore = create<UIStore>((set) => ({
   toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   darkMode: false,
-  toggleDarkMode: () => set(state => ({ darkMode: !state.darkMode })),
+  toggleDarkMode: () => set(state => {
+    const newDarkMode = !state.darkMode;
+    // Apply dark mode to document
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    return { darkMode: newDarkMode };
+  }),
   toasts: [],
   addToast: (message, type) =>
     set(state => ({
