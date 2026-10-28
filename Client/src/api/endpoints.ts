@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { Meeting, ProcessingJob, ChatMessage, ChatRequest } from '../types/api';
+import type { Meeting, ProcessingJob, ChatMessage, ChatRequest } from '../types/api';
 
 export const meetingsAPI = {
   list: (skip = 0, limit = 20) =>
