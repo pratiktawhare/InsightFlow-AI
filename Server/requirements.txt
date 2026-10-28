@@ -1,0 +1,28 @@
+# --- API layer ---
+fastapi
+uvicorn[standard]
+python-multipart
+sse-starlette
+python-dotenv
+
+# --- Audio input ---
+yt-dlp
+
+# --- Transcription + Hindi->English translation (local Whisper) ---
+faster-whisper
+
+# --- LLM (Groq) via LangChain LCEL ---
+langchain
+langchain-core
+langchain-community
+langchain-groq
+langchain-text-splitters
+
+# --- RAG: ChromaDB + HuggingFace embeddings ---
+chromadb
+langchain-chroma
+langchain-huggingface
+sentence-transformers
+
+# --- Export ---
+reportlab
