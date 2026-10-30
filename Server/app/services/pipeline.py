@@ -77,13 +77,37 @@ def _fail(meeting_id: str, message: str) -> None:
     _emit(meeting_id, "failed", "error", 1.0, message[:200])
 
 
+def _youtube_download_message(raw: str) -> str:
+    """Translate raw yt-dlp errors into clear, actionable user messages."""
+    low = raw.lower()
+    if "sign in to confirm" in low or "confirm you're not a bot" in low or "not a bot" in low:
+        return (
+            "YouTube blocked the automatic download from this server (anti-bot protection). "
+            "Please download the video on your computer first, then upload the file to InsightFlow instead."
+        )
+    if "http error 403" in low or "http error 429" in low:
+        return (
+            "YouTube refused the download request (403/429 rate limit). "
+            "Please download the video on your computer first, then upload the file to InsightFlow instead."
+        )
+    if "video unavailable" in low or "removed by the uploader" in low or "private video" in low:
+        return "This YouTube video is unavailable (removed, private, or region-locked)."
+    if "unsupported url" in low:
+        return "This URL doesn't look like a valid YouTube video link. Paste the watch/youtu.be/shorts URL."
+    # keep the original message but cap its length
+    return raw[:400] if raw else "YouTube download failed. Try again or upload the file instead."
+
+
 def _run(meeting_id: str, language: str, youtube_url: str | None, source_path: str | None) -> None:
     emit = _emit
     try:
         # 1 — download/prepare
         if youtube_url:
             emit(meeting_id, "processing", "download", 0.02)
-            source_path = ap.download_youtube_audio(youtube_url)
+            try:
+                source_path = ap.download_youtube_audio(youtube_url)
+            except Exception as exc:
+                raise RuntimeError(_youtube_download_message(str(exc))) from exc
             emit(meeting_id, "processing", "download", 0.05, "audio downloaded")
         if not source_path:
             raise RuntimeError("No audio source was provided.")

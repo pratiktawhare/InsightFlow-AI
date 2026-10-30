@@ -110,11 +110,15 @@ def load_vector_store(meeting_id: str) -> Chroma | None:
 
 
 def delete_vector_store(meeting_id: str) -> None:
-    client = Chroma(
-        collection_name=collection_name(meeting_id),
-        embedding_function=get_embeddings(),
-        persist_directory=str(settings.vector_db_dir),
-    )._client
+    """Delete the meeting's collection directly via chromadb.
+
+    Deliberately avoids the LangChain wrapper / embedding model — deletion only
+    needs the raw client, and loading embeddings here would add ~400 MB just to
+    remove a collection.
+    """
+    import chromadb
+
+    client = chromadb.PersistentClient(path=str(settings.vector_db_dir))
     collection_names = {
         item.name if hasattr(item, "name") else item
         for item in client.list_collections()

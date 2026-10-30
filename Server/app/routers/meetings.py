@@ -173,8 +173,16 @@ def delete_meeting(meeting_id: str, db: Session = Depends(get_db)):
     m = _get_or_404(db, meeting_id)
     from app.core import vector_store as vs
 
-    delete_meeting_files(meeting_id, m.source_url)
-    vs.delete_vector_store(meeting_id)
+    # cleanup is best-effort: never block the row deletion on file/vectordb errors
+    try:
+        delete_meeting_files(meeting_id, m.source_url)
+    except Exception as exc:
+        print(f"[delete] cleanup failed for {meeting_id}: {exc}")
+    try:
+        vs.delete_vector_store(meeting_id)
+    except Exception as exc:
+        print(f"[delete] vector cleanup failed for {meeting_id}: {exc}")
+
     db.delete(m)
     db.commit()
     return None
