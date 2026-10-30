@@ -12,6 +12,7 @@ sqlalchemy>=2.0.0
 # --- Audio input ---
 yt-dlp
 pydub
+audioop-lts; python_version >= "3.13"  # stdlib audioop removed in 3.13, needed by pydub
 
 # --- Transcription + Hindi->English translation ---
 faster-whisper
