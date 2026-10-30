@@ -19,6 +19,7 @@ from app.db import LocalSessionFactory
 from app.models import Meeting
 from app.progress import publish
 from app.utils import audio_processor as ap
+from app.utils.storage import delete_meeting_files
 
 settings = get_settings()
 
@@ -159,6 +160,13 @@ def _run(meeting_id: str, language: str, youtube_url: str | None, source_path: s
 
         _emit(meeting_id, "ready", "ready", 1.0)
         print(f"[pipeline] Meeting {meeting_id} ready.")
+
+        # free disk: raw media is no longer needed once results are persisted
+        try:
+            delete_meeting_files(meeting_id, youtube_url)
+            print(f"[pipeline] Cleaned up source media for {meeting_id}.")
+        except Exception as cleanup_exc:
+            print(f"[pipeline] Post-success cleanup failed for {meeting_id}: {cleanup_exc}")
 
     except Exception as e:
         traceback.print_exc()
