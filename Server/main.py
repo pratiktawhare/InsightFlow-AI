@@ -58,6 +58,11 @@ app.include_router(chat.router)
 app.include_router(exports.router)
 
 
+@app.get("/", include_in_schema=False)
+def root():
+    return {"service": "InsightFlow AI", "status": "ok"}
+
+
 @app.get("/api/health", tags=["system"])
 def health():
     ready = bool(settings.groq_api_key)
