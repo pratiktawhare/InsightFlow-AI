@@ -1,9 +1,12 @@
 from functools import lru_cache
+import json
 from pathlib import Path
 
 import os
+from typing import Annotated
+from pydantic import field_validator
 from dotenv import load_dotenv
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict, NoDecode
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -44,12 +47,24 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite:///{DATA_DIR / 'insightflow.db'}"
 
     # CORS
-    cors_origins: list[str] = [
+    cors_origins: Annotated[list[str], NoDecode] = [
         "http://localhost:5173",
         "http://localhost:4173",
         "http://localhost:3000",
         "http://127.0.0.1:5173",
     ]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_cors_origins(cls, v):
+        if isinstance(v, str):
+            s = v.strip()
+            if s.startswith("["):
+                return json.loads(s)
+            if not s:
+                return []
+            return [o.strip() for o in s.split(",") if o.strip()]
+        return v
 
     def __init__(self, **kwargs):
         load_dotenv(BASE_DIR / ".env", override=False)
