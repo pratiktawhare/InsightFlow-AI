@@ -1,10 +1,24 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>client</title>
+    <meta name="description" content="InsightFlow AI — turn meetings and videos into summaries, action items and a chat with your transcript." />
+    <title>InsightFlow AI — Meeting & Video Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      // apply saved theme before first paint to avoid flashing
+      try {
+        const theme = localStorage.getItem('insightflow-theme') || 'dark'
+        document.documentElement.classList.toggle('dark', theme === 'dark')
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

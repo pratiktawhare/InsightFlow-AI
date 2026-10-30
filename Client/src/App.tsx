@@ -1,27 +1,31 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Layout } from './components/layout/Layout';
-import { Dashboard } from './pages/Dashboard';
-import { Upload } from './pages/Upload';
-import { Meetings } from './pages/Meetings';
-import { MeetingDetail } from './pages/MeetingDetail';
-import { Analytics } from './pages/Analytics';
-import { Settings } from './pages/Settings';
+import { Suspense, lazy } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { AppLayout } from './components/layout/AppLayout'
+import { FullPageLoader } from './components/ui/kit'
 
-function App() {
+const Landing = lazy(() => import('./pages/Landing').then((m) => ({ default: m.Landing })))
+const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })))
+const NewMeeting = lazy(() => import('./pages/NewMeeting').then((m) => ({ default: m.NewMeeting })))
+const MeetingDetail = lazy(() => import('./pages/MeetingDetail').then((m) => ({ default: m.MeetingDetail })))
+const TasksPage = lazy(() => import('./pages/TasksPage').then((m) => ({ default: m.TasksPage })))
+const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })))
+
+export default function App() {
   return (
-    <Router>
-      <Layout>
+    <BrowserRouter>
+      <Suspense fallback={<FullPageLoader />}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/upload" element={<Upload />} />
-          <Route path="/meetings" element={<Meetings />} />
-          <Route path="/meeting/:id" element={<MeetingDetail />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/" element={<Landing />} />
+          <Route path="/app" element={<AppLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="new" element={<NewMeeting />} />
+            <Route path="tasks" element={<TasksPage />} />
+            <Route path="meetings/:id" element={<MeetingDetail />} />
+          </Route>
+          <Route path="/dashboard" element={<Navigate to="/app" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
-      </Layout>
-    </Router>
-  );
+      </Suspense>
+    </BrowserRouter>
+  )
 }
-
-export default App;

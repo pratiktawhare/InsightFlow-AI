@@ -1,98 +1,155 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
-import { Tabs } from '../components/ui/Tabs';
-import { Button } from '../components/ui/Button';
-import { TranscriptView } from '../components/features/TranscriptView';
-import { ChatInterface } from '../components/features/ChatInterface';
+import { useState } from 'react'
+import { useParams } from 'react-router-dom'
+import {
+  BotMessageSquare,
+  Clapperboard,
+  Clock3,
+  Download,
+  FileText,
+  Gauge,
+  ListChecks,
+  ScrollText,
+  Type,
+} from 'lucide-react'
+import { useMeeting } from '../api/hooks'
+import { Api, downloadFile } from '../api/client'
+import { Badge, Button, Skeleton } from '../components/ui/kit'
+import { StatusBadge } from '../components/ui/status'
+import { fmtDuration, fmtNumber, youtubeId, cn } from '../lib/utils'
+import { ProcessingView } from '../components/meeting/ProcessingView'
+import { OverviewTab } from '../components/meeting/OverviewTab'
+import { ChatTab } from '../components/meeting/ChatTab'
+import { TranscriptTab } from '../components/meeting/TranscriptTab'
 
-const mockMeeting = {
-  id: '1',
-  title: 'Product Planning Q1 2026',
-  source: 'youtube' as const,
-  status: 'completed' as const,
-  language: 'english',
-  createdAt: new Date('2026-10-28'),
-  transcript: 'Full transcript would go here...',
-  summary: 'This meeting discussed Q1 product priorities and roadmap decisions.',
-  actionItems: '1. Follow up on API design\n2. Schedule architecture review',
-  keyDecisions: '1. Decided on new pricing model\n2. Approved backend refactor',
-  openQuestions: '1. When to launch mobile app?',
-};
+type Tab = 'overview' | 'chat' | 'transcript'
 
-export const MeetingDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
+  { key: 'overview', label: 'Overview', icon: <Gauge size={15} /> },
+  { key: 'chat', label: 'AI Chat', icon: <BotMessageSquare size={15} /> },
+  { key: 'transcript', label: 'Transcript', icon: <ScrollText size={15} /> },
+]
 
-  const tabs = [
-    {
-      id: 'overview',
-      label: 'Overview',
-      content: (
-        <div className="space-y-6">
-          <Card className="p-6">
-            <h3 className="text-lg font-bold mb-3">Summary</h3>
-            <p className="text-gray-700">{mockMeeting.summary}</p>
-          </Card>
+export interface Jump {
+  t: number
+  nonce: number
+}
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-bold mb-3">Action Items</h3>
-              <p className="text-gray-700 whitespace-pre-line">{mockMeeting.actionItems}</p>
-            </Card>
+export function MeetingDetail() {
+  const { id = '' } = useParams()
+  const { data: m, isLoading } = useMeeting(id)
+  const [tab, setTab] = useState<Tab>('overview')
+  const [jump, setJump] = useState<Jump | null>(null)
 
-            <Card className="p-6">
-              <h3 className="text-lg font-bold mb-3">Key Decisions</h3>
-              <p className="text-gray-700 whitespace-pre-line">
-                {mockMeeting.keyDecisions}
-              </p>
-            </Card>
-          </div>
-
-          <Card className="p-6">
-            <h3 className="text-lg font-bold mb-3">Open Questions</h3>
-            <p className="text-gray-700">{mockMeeting.openQuestions}</p>
-          </Card>
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-[1000px] space-y-4 px-4 py-8 sm:px-8">
+        <Skeleton className="h-24" />
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Skeleton className="h-64 lg:col-span-2" />
+          <Skeleton className="h-64" />
         </div>
-      ),
-    },
-    {
-      id: 'transcript',
-      label: 'Transcript',
-      content: <TranscriptView transcript={mockMeeting.transcript} />,
-    },
-    {
-      id: 'chat',
-      label: 'Chat',
-      content: <ChatInterface meetingId={id || ''} />,
-    },
-  ];
+      </div>
+    )
+  }
+  if (!m) return null
+
+  const processing = m.status === 'processing' || m.status === 'pending'
+  const ytVideoId = youtubeId(m.source_url)
+
+  if (processing) {
+    return (
+      <div className="mx-auto max-w-[760px] px-4 py-10 sm:px-8">
+        <ProcessingView meeting={m} />
+      </div>
+    )
+  }
 
   return (
-    <div>
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={() => navigate('/meetings')}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-        >
-          <ArrowLeft size={24} />
-        </button>
-        <div>
-          <h1 className="text-3xl font-bold">{mockMeeting.title}</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {mockMeeting.createdAt.toLocaleDateString()} • <Badge>{mockMeeting.source}</Badge>
-          </p>
+    <div className="mx-auto max-w-[1000px] px-4 py-6 sm:px-8 sm:py-8">
+      {/* header */}
+      <div className="card p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            {m.source_type === 'youtube' && m.source_url ? (
+              <a href={m.source_url} target="_blank" rel="noreferrer">
+                <Badge tone="danger"><Clapperboard size={11} /> YouTube source</Badge>
+              </a>
+            ) : (
+              <Badge><FileText size={11} /> Uploaded file</Badge>
+            )}
+            <h1 className="font-display mt-1 text-2xl font-semibold tracking-tight text-ink">{m.title}</h1>
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-ink-2">
+              <StatusBadge status={m.status} />
+              <span className="flex items-center gap-1"><Clock3 size={12} /> {fmtDuration(m.duration_seconds)}</span>
+              <span className="capitalize flex items-center gap-1"><Type size={12} /> {m.language}</span>
+              <span className="flex items-center gap-1"><ScrollText size={12} /> {fmtNumber(m.word_count)} words</span>
+              <span className="flex items-center gap-1"><ListChecks size={12} /> {m.open_task_count} open tasks</span>
+            </div>
+          </div>
+
+          {/* export actions */}
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => downloadFile(Api.exportMeeting(m.id, 'pdf'))}>
+              <Download size={14} /> PDF
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => downloadFile(Api.exportMeeting(m.id, 'md'))}>
+              <Download size={14} /> Markdown
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="mb-6 flex gap-3">
-        <Button variant="outline">Export PDF</Button>
-        <Button variant="outline">Share</Button>
-      </div>
+      {/* tabs */}
+      <div className="card mt-5 overflow-hidden p-0">
+        <div className="flex border-b border-line bg-card-2/50 px-2 sm:px-4">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                'flex cursor-pointer items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors',
+                tab === t.key
+                  ? 'border-brand text-brand'
+                  : 'border-transparent text-ink-2 hover:text-ink',
+              )}
+            >
+              {t.icon}
+              {t.label}
+              {t.key === 'chat' && m.messages.length > 0 && (
+                <span className="rounded-full bg-card-2 px-1.5 text-[10px] text-ink-3">{m.messages.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
 
-      <Tabs tabs={tabs} />
+        <div className="p-4 sm:p-6">
+          {tab === 'overview' && (
+            <OverviewTab
+              meeting={m}
+              onAsk={(q) => {
+                setTab('chat')
+                window.dispatchEvent(new CustomEvent('ifl-chat-ask', { detail: q }))
+              }}
+            />
+          )}
+          {tab === 'chat' && (
+            <ChatTab
+              meetingId={m.id}
+              onJump={(t) => {
+                setJump({ t, nonce: Date.now() })
+                setTab('transcript')
+              }}
+            />
+          )}
+          {tab === 'transcript' && (
+            <TranscriptTab
+              meeting={m}
+              jump={jump}
+              ytVideoId={ytVideoId}
+            />
+          )}
+        </div>
+      </div>
     </div>
-  );
-};
+  )
+}

@@ -1,65 +1,76 @@
-from dotenv import load_dotenv
-from utils.audio_processor import process_input
-from core.transcriber import transcribe_all
-from core.summarizer import summarize, generate_title
-from core.extractor import extract_action_items, extract_key_decisions, extract_questions
-from core.rag_engine import build_rag_chain, ask_question
+"""InsightFlow AI — FastAPI server.
+
+Run:  .venv/Scripts/python.exe -m uvicorn main:app --reload --port 8000
+Docs: http://localhost:8000/docs
+"""
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+
+from app.config import ensure_dirs, get_settings
+from app.db import Base, engine, LocalSessionFactory
+from app.models import ChatMessage, Meeting, Task  # noqa: F401 (register models)
+from app.routers import chat, exports, meetings, tasks
+
+settings = get_settings()
 
 
-load_dotenv()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ensure_dirs(settings)
+    Base.metadata.create_all(engine)
+    # mark broken runs from a previous process as failed
+    db = LocalSessionFactory()
+    try:
+        db.execute(
+            text("UPDATE meetings SET status='failed', stage='error', "
+                 "error='Processing was interrupted (server restarted).' "
+                 "WHERE status IN ('pending','processing')"),
+            {},
+        )
+        db.commit()
+    finally:
+        db.close()
+    yield
 
-def run_pipeline(source :str, language :str = "english") -> dict:
-    print("starting AI Video Assistant")
 
-    chunks = process_input(source)
+app = FastAPI(
+    title="InsightFlow AI",
+    description="RAG-powered meeting & video intelligence: transcription, summaries, action items and chat.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
-    transcript = transcribe_all(chunks,language)
-    print(f"raw transcription (first 300 characters ) {transcript[:300]}")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    title = generate_title(transcript)
+app.include_router(meetings.router)
+app.include_router(tasks.router)
+app.include_router(chat.router)
+app.include_router(exports.router)
 
-    summary = summarize(transcript)
 
-    action_item = extract_action_items(transcript)
-
-    decisions = extract_key_decisions(transcript)
-    questions = extract_questions(transcript)
-    
-    rag_chain = build_rag_chain(transcript)
-
+@app.get("/api/health", tags=["system"])
+def health():
+    ready = bool(settings.groq_api_key)
+    sarvam = bool(settings.sarvam_api_key)
     return {
-        "title": title,
-        "transcript": transcript,
-        "summary": summary,
-        "action_items": action_item,
-        "key_decisions": decisions,
-        "open_questions": questions,
-        "rag_chain": rag_chain,
+        "ok": True,
+        "llm_configured": ready,
+        "sarvam_configured": sarvam,
+        "model": settings.groq_model,
     }
 
+
 if __name__ == "__main__":
-    # CLI entry point
-    source = input("Enter YouTube URL or local file path: ").strip()
-    language = input("Language (english/hinglish): ").strip() or "english"
-    result = run_pipeline(source, language)
+    import uvicorn
 
-    print("\n" + "=" * 60)
-    print(f"📌 Title: {result['title']}")
-    print(f"\n📋 Summary:\n{result['summary']}")
-    print(f"\n✅ Action Items:\n{result['action_items']}")
-    print(f"\n🔑 Key Decisions:\n{result['key_decisions']}")
-    print(f"\n❓ Open Questions:\n{result['open_questions']}")
-    print("=" * 60)
-
-    # Phase 2 — Chat with your meeting via RAG
-    print("\n💬 Chat with your meeting (type 'exit' to quit)\n")
-    rag_chain = result["rag_chain"]
-    while True:
-        question = input("You: ").strip()
-        if question.lower() in ["exit", "quit", "q"]:
-            print("👋 Goodbye!")
-            break
-        if not question:
-            continue
-        answer = ask_question(rag_chain, question)
-        print(f"\n🤖 Assistant: {answer}\n")
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -4,12 +4,19 @@ uvicorn[standard]
 python-multipart
 sse-starlette
 python-dotenv
+pydantic-settings>=2.0.0
+
+# --- Database ---
+sqlalchemy>=2.0.0
 
 # --- Audio input ---
 yt-dlp
+pydub
 
-# --- Transcription + Hindi->English translation (local Whisper) ---
+# --- Transcription + Hindi->English translation ---
 faster-whisper
+av<19  # PyAV 19 removes API faster-whisper needs
+requests
 
 # --- LLM (Groq) via LangChain LCEL ---
 langchain
@@ -22,12 +29,7 @@ langchain-huggingface
 # --- RAG: ChromaDB + HuggingFace embeddings ---
 chromadb
 langchain-chroma
-langchain-huggingface
 sentence-transformers
 
 # --- Export ---
 reportlab
-
-# --- Database & API ---
-sqlalchemy>=2.0.0
-pydantic-settings>=2.0.0
