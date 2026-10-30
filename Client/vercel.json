@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://YOUR-RENDER-SERVER.onrender.com/api/:path*"
+      "destination": "https://insightflow-ai-i8t8.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
